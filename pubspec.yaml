@@ -7,7 +7,10 @@ environment:
   sdk: ^3.4.0
 
 dependencies:
+  background_downloader: ^2.0.1
+  better_player: ^0.0.84
   bloc: ^8.1.4
+  expandable_text: ^2.3.0
   flutter:
     sdk: flutter
   flutter_bloc: ^8.1.6
