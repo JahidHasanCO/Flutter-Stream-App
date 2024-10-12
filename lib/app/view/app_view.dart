@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:stream_app/l10n/l10n.dart';
 import 'package:stream_app/router/router.dart';
+import 'package:stream_app/shared/repositories/download_repo.dart';
 import 'package:stream_app/theme/app_themes.dart';
 
 /*
@@ -15,19 +17,18 @@ https://vz-5dc327cb-9de.b-cdn.net/5d22127d-51dd-4420-9276-74d55673ee99/play_720p
 */
 
 class AppView extends StatelessWidget {
-   AppView({super.key});
+  AppView({super.key});
 
-      final router = AppRouter(initialLocation: RouteNames.mediaPlayer.asPath);
+  final router = AppRouter(initialLocation: RouteNames.mediaPlayer.asPath);
 
   @override
   Widget build(BuildContext context) {
-    return  MaterialApp.router(
-        debugShowCheckedModeBanner: false,
-      themeMode: ThemeMode.light,
+    return MaterialApp.router(
+      debugShowCheckedModeBanner: false,
+      themeMode: ThemeMode.dark,
       theme: appTheme(),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-  
       routerConfig: router.config,
     );
   }
@@ -38,6 +39,9 @@ class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppView();
+    return RepositoryProvider(
+      create: (context) => DownloadRepo(),
+      child: AppView(),
+    );
   }
 }

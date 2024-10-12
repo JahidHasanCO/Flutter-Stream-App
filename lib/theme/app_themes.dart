@@ -26,15 +26,18 @@ ThemeData appTheme() {
 
 AppBarTheme appBarTheme() {
   return const AppBarTheme(
-    color: AppColors.primaryColor,
+    color: AppColors.backgroundColor,
     elevation: 0,
     centerTitle: true,
     systemOverlayStyle: SystemUiOverlayStyle(
-         statusBarColor: AppColors.primaryDarkColor, // Status bar
+         statusBarColor: AppColors.backgroundColor, // Status bar
+         statusBarBrightness: Brightness.light,
+         statusBarIconBrightness: Brightness.light,
+         systemNavigationBarColor: AppColors.backgroundColor,
      ),
-    iconTheme: IconThemeData(color: AppColors.textTitleColor),
+    iconTheme: IconThemeData(color: AppColors.primaryColor),
     titleTextStyle: TextStyle(
-      color: AppColors.textTitleColor,
+      color: AppColors.primaryColor,
       fontSize: 16,
       fontFamily: 'Inter',
       fontWeight: FontWeight.w600,
