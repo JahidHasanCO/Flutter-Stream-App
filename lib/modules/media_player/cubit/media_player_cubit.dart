@@ -18,6 +18,10 @@ class MediaPlayerCubit extends Cubit<MediaPlayerState> {
         super(MediaPlayerState(videoUrl: videoId.streamUrl)) {
     _loadDownloadedFile();
 
+    _initStreamSubscriptions();
+  }
+
+  void _initStreamSubscriptions() {
     _downloadProgressSubsctiption =
         _downloadRepo.progressStream.listen((progress) {
       emit(state.copyWith(downloadProgress: progress));
@@ -39,6 +43,8 @@ class MediaPlayerCubit extends Cubit<MediaPlayerState> {
     emit(
       state.copyWith(
         statusMsg: 'Download Started!',
+        downloadProgress: 0,
+        downloadTaskStatus: DownloadTaskStatus.enqueued,
       ),
     );
   }
@@ -52,6 +58,8 @@ class MediaPlayerCubit extends Cubit<MediaPlayerState> {
     emit(
       state.copyWith(
         statusMsg: 'Download Cancelled!',
+        downloadProgress: 0,
+        downloadTaskStatus: DownloadTaskStatus.canceled,
       ),
     );
   }
@@ -65,6 +73,8 @@ class MediaPlayerCubit extends Cubit<MediaPlayerState> {
           status: MediaPlayerStatus.success,
           statusMsg: 'Video removed successfully',
           videoUrl: _videoId.streamUrl,
+          downloadProgress: 0,
+          downloadTaskStatus: DownloadTaskStatus.undefined,
           local: false, // Update local status accordingly
         ),
       );
@@ -74,6 +84,8 @@ class MediaPlayerCubit extends Cubit<MediaPlayerState> {
         state.copyWith(
           status: MediaPlayerStatus.failure,
           local: false,
+          downloadProgress: 0,
+          downloadTaskStatus: DownloadTaskStatus.undefined,
           videoUrl: _videoId.streamUrl,
           statusMsg: 'Video not found or could not be removed',
         ),
@@ -101,7 +113,8 @@ class MediaPlayerCubit extends Cubit<MediaPlayerState> {
         emit(
           state.copyWith(
             status: MediaPlayerStatus.failure,
-            statusMsg: 'File not found',
+            local: false,
+            statusMsg: '',
           ),
         );
       }

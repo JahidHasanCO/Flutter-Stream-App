@@ -36,6 +36,7 @@ class DownloadRepo {
       url: url,
       fileName: fileName,
       savedDir: savePath ?? path,
+      openFileFromNotification: false,
     );
   }
 

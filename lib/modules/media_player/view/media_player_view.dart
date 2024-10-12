@@ -124,7 +124,7 @@ class _MediaPlayerViewState extends State<MediaPlayerView> {
                                 },
                                 title:
                                     'Do you want to remove downloaded video?',
-                              );
+                              ).show(context);
                             } else {
                               if (downloadTaskStatus ==
                                       DownloadTaskStatus.running ||
@@ -135,14 +135,14 @@ class _MediaPlayerViewState extends State<MediaPlayerView> {
                                     cubit().cancelPressed();
                                   },
                                   title: 'Do you want to calcel downloading?',
-                                );
+                                ).show(context);
                               } else {
                                 AppAlertDialog(
                                   onYes: () {
                                     cubit().downloadPressed();
                                   },
                                   title: 'Do you want to download this video?',
-                                );
+                                ).show(context);
                               }
                             }
                           },
@@ -150,7 +150,10 @@ class _MediaPlayerViewState extends State<MediaPlayerView> {
                               ? const Icon(
                                   Icons.download_done,
                                 ) // Downloaded icon
-                              : downloadTaskStatus == DownloadTaskStatus.running
+                              : downloadTaskStatus ==
+                                          DownloadTaskStatus.running ||
+                                      downloadTaskStatus ==
+                                          DownloadTaskStatus.enqueued
                                   ? SizedBox(
                                       height: 24,
                                       width: 24,
