@@ -31,8 +31,8 @@ AppBarTheme appBarTheme() {
     centerTitle: true,
     systemOverlayStyle: SystemUiOverlayStyle(
          statusBarColor: AppColors.backgroundColor, // Status bar
-         statusBarBrightness: Brightness.light,
-         statusBarIconBrightness: Brightness.light,
+         statusBarBrightness: Brightness.dark,
+         statusBarIconBrightness: Brightness.dark,
          systemNavigationBarColor: AppColors.backgroundColor,
      ),
     iconTheme: IconThemeData(color: AppColors.primaryColor),

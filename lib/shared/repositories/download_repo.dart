@@ -3,27 +3,19 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:path_provider/path_provider.dart';
 
 class DownloadRepo {
-  // Factory constructor to return the singleton instance
-  factory DownloadRepo() {
-    return _instance;
-  }
-
-  // Private constructor
-  DownloadRepo._(){
+  DownloadRepo() {
     setupDownloader();
   }
 
-  // Singleton instance
-  static final DownloadRepo _instance = DownloadRepo._();
-
-   // StreamControllers for progress and status
-  final StreamController<double> _progressController =
+  // StreamControllers for progress and status
+  StreamController<double> _progressController =
       StreamController<double>.broadcast();
-  final StreamController<DownloadTaskStatus> _statusController =
+  StreamController<DownloadTaskStatus> _statusController =
       StreamController<DownloadTaskStatus>.broadcast();
 
   Stream<double> get progressStream => _progressController.stream;
@@ -32,7 +24,6 @@ class DownloadRepo {
   // Get the path where files will be saved
   Future<String> get _getSavePath async =>
       getApplicationDocumentsDirectory().then((dir) => dir.path);
-
 
 // Start download method with progress and status updates
   Future<String?> startDownload(
@@ -58,10 +49,21 @@ class DownloadRepo {
 
     // Listen for updates from the isolate
     _port.listen((dynamic data) {
+      if (kDebugMode) {
+        print('Data received in port: $data');
+      } // Debug print
       // final id = data[0] as String;
-      final mapData = data as Map;
-      final status = DownloadTaskStatus.values[mapData[1] as int];
-      final progress = mapData[2] as int;
+      final mapData = data as Map<String, dynamic>;
+      final status = DownloadTaskStatus.values[mapData['status'] as int];
+      final progress = mapData['progress'] as int;
+
+      // Update the progress and status streams only if they're still open
+      if (_progressController.isClosed) {
+        _progressController = StreamController<double>.broadcast();
+      }
+      if (_statusController.isClosed) {
+        _statusController = StreamController<DownloadTaskStatus>.broadcast();
+      }
 
       // Update the progress and status streams
       _progressController.add(progress / 100);
@@ -69,7 +71,8 @@ class DownloadRepo {
 
       // Close streams if download is complete or failed
       if (status == DownloadTaskStatus.complete ||
-          status == DownloadTaskStatus.failed) {
+          status == DownloadTaskStatus.failed ||
+          status == DownloadTaskStatus.canceled) {
         _progressController.close();
         _statusController.close();
       }
@@ -83,7 +86,11 @@ class DownloadRepo {
   @pragma('vm:entry-point')
   static void downloadCallback(String id, int status, int progress) {
     final send = IsolateNameServer.lookupPortByName('downloader_send_port');
-    send?.send([id, status, progress]);
+    send?.send({
+      'id': id,
+      'status': status,
+      'progress': progress,
+    });
   }
 
   // Cancel a download task by taskId
@@ -129,7 +136,6 @@ class DownloadRepo {
     IsolateNameServer.removePortNameMapping('downloader_send_port');
   }
 
-
   // Query all completed download tasks
   Future<List<DownloadTask>?> getCompletedDownloads() async {
     final tasks = await FlutterDownloader.loadTasks();
@@ -138,31 +144,36 @@ class DownloadRepo {
         .toList();
   }
 
-  // Get a list of downloaded files in the application directory
-  Future<List<FileSystemEntity>> getDownloadedFiles() async {
-    final savePath = await _getSavePath;
-    final directory = Directory(savePath);
-    final isExist = await directory.exists();
-    if (isExist) {
-      // Get all files in the directory
-      return directory.listSync().whereType<File>().toList();
-    } else {
-      return [];
-    }
-  }
-
   // Query a specific downloaded file by its name
-  Future<File?> getDownloadedFileByName(String fileName) async {
-    final files = await getDownloadedFiles();
+  Future<DownloadTask?> getDownloadedFileByName(String fileName) async {
+    final tasks = await getCompletedDownloads();
+    if (tasks == null) return null;
+
+    for (final task in tasks) {
+      if (task.filename == fileName) {
+        return task;
+      }
+    }
+
+    return null;
+  }
+
+  bool removeFileByPath(String path) {
     try {
-      return files.firstWhere(
-        (file) => file.path.contains(fileName),
-      ) as File;
+      final file = File(path);
+
+      // Check if the file exists
+      if (file.existsSync()) {
+        file.deleteSync();
+        return true; // Return true if the file was successfully deleted
+      } else {
+        return false; // Return false if the file doesn't exist
+      }
     } catch (e) {
-      return null; // Return null if file not found
+      return false; // Return false in case of an error
     }
   }
 
-    // Private port for the isolate communication
+  // Private port for the isolate communication
   final ReceivePort _port = ReceivePort();
 }

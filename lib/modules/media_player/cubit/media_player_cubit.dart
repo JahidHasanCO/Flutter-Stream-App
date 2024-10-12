@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:stream_app/shared/repositories/download_repo.dart';
 import 'package:stream_app/utils/utils.dart';
@@ -31,24 +32,68 @@ class MediaPlayerCubit extends Cubit<MediaPlayerState> {
   }
 
   Future<void> downloadPressed() async {
-    await _downloadRepo.startDownload(
+    _taskId = await _downloadRepo.startDownload(
       _videoId.downloadUrl,
       fileName: _videoId,
     );
+    emit(
+      state.copyWith(
+        statusMsg: 'Download Started!',
+      ),
+    );
+  }
+
+  Future<void> cancelPressed() async {
+    if (_taskId == null) {
+      await _downloadRepo.cancelAllDownloads();
+    } else {
+      await _downloadRepo.cancelDownload(_taskId ?? '');
+    }
+    emit(
+      state.copyWith(
+        statusMsg: 'Download Cancelled!',
+      ),
+    );
+  }
+
+  Future<void> removePressed() async {
+    final success = _downloadRepo.removeFileByPath(state.videoUrl);
+    if (success) {
+      // Emit a success state if the file was removed successfully
+      emit(
+        state.copyWith(
+          status: MediaPlayerStatus.success,
+          statusMsg: 'Video removed successfully',
+          videoUrl: _videoId.streamUrl,
+          local: false, // Update local status accordingly
+        ),
+      );
+    } else {
+      // Emit a failure state if the file was not found
+      emit(
+        state.copyWith(
+          status: MediaPlayerStatus.failure,
+          local: false,
+          videoUrl: _videoId.streamUrl,
+          statusMsg: 'Video not found or could not be removed',
+        ),
+      );
+    }
   }
 
   Future<void> _loadDownloadedFile() async {
     try {
       // Try to get the downloaded file by the video ID
-      final file = await _downloadRepo.getDownloadedFileByName(_videoId);
+      final task = await _downloadRepo.getDownloadedFileByName(_videoId);
 
       // Emit the file path to the state if the file exists
-      if (file != null) {
+      if (task != null) {
+        _taskId = task.taskId;
         emit(
           state.copyWith(
             status: MediaPlayerStatus.success,
             statusMsg: 'File loaded successfully',
-            videoUrl: file.path, // Assuming 'file' has a path property
+            videoUrl: task.savedDir, // Assuming 'file' has a path property
             local: true,
           ),
         );
@@ -61,17 +106,14 @@ class MediaPlayerCubit extends Cubit<MediaPlayerState> {
         );
       }
     } catch (e) {
-      // Handle and emit any error that might occur
-      emit(
-        state.copyWith(
-          status: MediaPlayerStatus.failure,
-          statusMsg: 'Error loading file: $e',
-        ),
-      );
+      if (kDebugMode) {
+        print(e);
+      }
     }
   }
 
   final String _videoId;
+  String? _taskId;
   final DownloadRepo _downloadRepo;
   StreamSubscription<DownloadTaskStatus>? _downloadStatusSubsctiption;
   StreamSubscription<double>? _downloadProgressSubsctiption;
