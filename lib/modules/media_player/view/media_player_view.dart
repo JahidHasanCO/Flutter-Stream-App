@@ -93,7 +93,7 @@ class _MediaPlayerViewState extends State<MediaPlayerView> {
                     selector: (state) => state.local,
                     builder: (context, local) {
                       return IconButton(
-                        onPressed: () {},
+                        onPressed: cubit().downloadPressed,
                         icon: Icon(
                           local ? Icons.download_done : Icons.download_sharp,
                         ),
