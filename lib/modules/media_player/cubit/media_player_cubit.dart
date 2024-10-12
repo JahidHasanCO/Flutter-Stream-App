@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bloc/bloc.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
@@ -28,24 +29,48 @@ class MediaPlayerCubit extends Cubit<MediaPlayerState> {
     });
 
     _downloadStatusSubsctiption = _downloadRepo.statusStream.listen((status) {
-      if (status == DownloadTaskStatus.complete) {
+      if (status == DownloadTaskStatus.enqueued) {
+        emit(
+          state.copyWith(
+            statusMsg: 'Download Started!',
+            downloadProgress: 0,
+            downloadTaskStatus: DownloadTaskStatus.enqueued,
+          ),
+        );
+      } else if (status == DownloadTaskStatus.complete) {
         _loadDownloadedFile();
+      } else if (status == DownloadTaskStatus.canceled) {
+        emit(
+          state.copyWith(
+            statusMsg: 'Download Cancelled!',
+            downloadProgress: 0,
+            downloadTaskStatus: DownloadTaskStatus.canceled,
+          ),
+        );
       }
       emit(state.copyWith(downloadTaskStatus: status));
     });
   }
 
+  Future<bool> internetConnected() async {
+    final connectivityResults = await Connectivity().checkConnectivity();
+
+    if (connectivityResults.contains(ConnectivityResult.mobile) ||
+        connectivityResults.contains(ConnectivityResult.wifi)) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   Future<void> downloadPressed() async {
+    if (!await internetConnected()) {
+      emit(state.copyWith(statusMsg: 'No internet connection'));
+      return;
+    }
     _taskId = await _downloadRepo.startDownload(
       _videoId.downloadUrl,
       fileName: _videoId,
-    );
-    emit(
-      state.copyWith(
-        statusMsg: 'Download Started!',
-        downloadProgress: 0,
-        downloadTaskStatus: DownloadTaskStatus.enqueued,
-      ),
     );
   }
 
@@ -55,13 +80,6 @@ class MediaPlayerCubit extends Cubit<MediaPlayerState> {
     } else {
       await _downloadRepo.cancelDownload(_taskId ?? '');
     }
-    emit(
-      state.copyWith(
-        statusMsg: 'Download Cancelled!',
-        downloadProgress: 0,
-        downloadTaskStatus: DownloadTaskStatus.canceled,
-      ),
-    );
   }
 
   Future<void> removePressed() async {
@@ -96,17 +114,21 @@ class MediaPlayerCubit extends Cubit<MediaPlayerState> {
   Future<void> _loadDownloadedFile() async {
     try {
       // Try to get the downloaded file by the video ID
-      final task = await _downloadRepo.getDownloadedFileByName(_videoId);
+      final task = await _downloadRepo.getDownloadedFileByName(
+        _videoId,
+      );
 
       // Emit the file path to the state if the file exists
       if (task != null) {
         _taskId = task.taskId;
+        final filePath = '${task.savedDir}/${task.filename}';
         emit(
           state.copyWith(
             status: MediaPlayerStatus.success,
-            statusMsg: 'File loaded successfully',
-            videoUrl: task.savedDir, // Assuming 'file' has a path property
+            videoUrl: filePath, // Assuming 'file' has a path property
             local: true,
+            downloadTaskStatus: task.status,
+            downloadProgress: task.progress.toDouble(),
           ),
         );
       } else {

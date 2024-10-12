@@ -28,7 +28,8 @@ class _MediaPlayerViewState extends State<MediaPlayerView> {
 
   Future<void> initializePlayer(String url) async {
     final betterPlayerDataSource = BetterPlayerDataSource(
-      BetterPlayerDataSourceType.network,
+     
+                BetterPlayerDataSourceType.network,
       url,
       videoFormat: BetterPlayerVideoFormat.hls,
     );
@@ -53,15 +54,14 @@ class _MediaPlayerViewState extends State<MediaPlayerView> {
     return BlocListener<MediaPlayerCubit, MediaPlayerState>(
       listenWhen: (previous, current) => previous.local != current.local,
       listener: (context, state) {
-        if (state.local) {
-          _betterPlayerController.setupDataSource(
-            BetterPlayerDataSource(
-              BetterPlayerDataSourceType.file,
-              state.videoUrl,
-              videoFormat: BetterPlayerVideoFormat.hls,
-            ),
-          );
-        }
+        _betterPlayerController.setupDataSource(
+          BetterPlayerDataSource(
+            state.local
+                ? BetterPlayerDataSourceType.file
+                : BetterPlayerDataSourceType.network,
+            state.videoUrl,
+          ),
+        );
       },
       child: Scaffold(
         backgroundColor: AppColors.backgroundColor,
@@ -90,124 +90,141 @@ class _MediaPlayerViewState extends State<MediaPlayerView> {
                   controller: _betterPlayerController,
                 ),
               ),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Expanded(
+                child: ListView(
+                  shrinkWrap: true,
                   children: [
-                    const Text(
-                      'Sample Title 1',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-                    ),
-                    Builder(
-                      builder: (context) {
-                        final downloadProgress = context.select(
-                          (MediaPlayerCubit cubit) =>
-                              cubit.state.downloadProgress,
-                        );
-                        final downloadTaskStatus = context.select(
-                          (MediaPlayerCubit cubit) =>
-                              cubit.state.downloadTaskStatus,
-                        );
-                        final local = context.select(
-                          (MediaPlayerCubit cubit) => cubit.state.local,
-                        );
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                        horizontal: 20,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Sample Title 1',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Builder(
+                            builder: (context) {
+                              final downloadProgress = context.select(
+                                (MediaPlayerCubit cubit) =>
+                                    cubit.state.downloadProgress,
+                              );
+                              final downloadTaskStatus = context.select(
+                                (MediaPlayerCubit cubit) =>
+                                    cubit.state.downloadTaskStatus,
+                              );
+                              final local = context.select(
+                                (MediaPlayerCubit cubit) => cubit.state.local,
+                              );
 
-                        return IconButton(
-                          onPressed: () {
-                            if (local) {
-                              AppAlertDialog(
-                                onYes: () {
-                                  cubit().removePressed();
+                              return IconButton(
+                                onPressed: () {
+                                  if (local) {
+                                    AppAlertDialog(
+                                      onYes: () {
+                                        cubit().removePressed();
+                                      },
+                                      title:
+                                          'Do you want to remove downloaded video?',
+                                    ).show(context);
+                                  } else {
+                                    if (downloadTaskStatus ==
+                                            DownloadTaskStatus.running ||
+                                        downloadTaskStatus ==
+                                            DownloadTaskStatus.enqueued) {
+                                      AppAlertDialog(
+                                        onYes: () {
+                                          cubit().cancelPressed();
+                                        },
+                                        title:
+                                            'Do you want to calcel downloading?',
+                                      ).show(context);
+                                    } else {
+                                      AppAlertDialog(
+                                        onYes: () {
+                                          cubit().downloadPressed();
+                                        },
+                                        title:
+                                            'Do you want to download this video?',
+                                      ).show(context);
+                                    }
+                                  }
                                 },
-                                title:
-                                    'Do you want to remove downloaded video?',
-                              ).show(context);
-                            } else {
-                              if (downloadTaskStatus ==
-                                      DownloadTaskStatus.running ||
-                                  downloadTaskStatus ==
-                                      DownloadTaskStatus.enqueued) {
-                                AppAlertDialog(
-                                  onYes: () {
-                                    cubit().cancelPressed();
-                                  },
-                                  title: 'Do you want to calcel downloading?',
-                                ).show(context);
-                              } else {
-                                AppAlertDialog(
-                                  onYes: () {
-                                    cubit().downloadPressed();
-                                  },
-                                  title: 'Do you want to download this video?',
-                                ).show(context);
-                              }
-                            }
-                          },
-                          icon: local
-                              ? const Icon(
-                                  Icons.download_done,
-                                ) // Downloaded icon
-                              : downloadTaskStatus ==
-                                          DownloadTaskStatus.running ||
-                                      downloadTaskStatus ==
-                                          DownloadTaskStatus.enqueued
-                                  ? SizedBox(
-                                      height: 24,
-                                      width: 24,
-                                      child: Stack(
-                                        children: [
-                                          const Icon(
-                                            Icons.stop,
-                                          ),
-                                          CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            value: downloadProgress,
-                                            valueColor:
-                                                const AlwaysStoppedAnimation<
-                                                    Color>(
-                                              AppColors.primaryDarkColor,
+                                icon: local
+                                    ? const Icon(
+                                        Icons.download_done,
+                                      ) // Downloaded icon
+                                    : downloadTaskStatus ==
+                                                DownloadTaskStatus.running ||
+                                            downloadTaskStatus ==
+                                                DownloadTaskStatus.enqueued
+                                        ? SizedBox(
+                                            height: 24,
+                                            width: 24,
+                                            child: Stack(
+                                              children: [
+                                                const Icon(
+                                                  Icons.stop,
+                                                ),
+                                                CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  value: downloadProgress,
+                                                  valueColor:
+                                                      const AlwaysStoppedAnimation<
+                                                          Color>(
+                                                    AppColors.primaryDarkColor,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
+                                          )
+                                        : const Icon(
+                                            Icons.download_sharp,
                                           ),
-                                        ],
-                                      ),
-                                    )
-                                  : const Icon(
-                                      Icons.download_sharp,
-                                    ),
-                        );
-                      },
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      child: Text(
+                        'Description',
+                        textAlign: TextAlign.start,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const Padding(
+                      padding:
+                          EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                      child: ExpandableText(
+                        'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.',
+                        expandText: 'show more',
+                        collapseText: 'show less',
+                        maxLines: 5,
+                        expanded: true,
+                        animation: true,
+                        expandOnTextTap: true,
+                        collapseOnTextTap: true,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                          color: AppColors.textGrayColor,
+                        ),
+                        linkColor: AppColors.primaryDarkColor,
+                      ),
                     ),
                   ],
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  'Description',
-                  textAlign: TextAlign.start,
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-                child: ExpandableText(
-                  'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.',
-                  expandText: 'show more',
-                  collapseText: 'show less',
-                  maxLines: 5,
-                  expanded: true,
-                  animation: true,
-                  expandOnTextTap: true,
-                  collapseOnTextTap: true,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                    color: AppColors.textGrayColor,
-                  ),
-                  linkColor: AppColors.primaryDarkColor,
                 ),
               ),
             ],

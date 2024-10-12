@@ -74,6 +74,9 @@ class DownloadRepo {
       if (status == DownloadTaskStatus.complete ||
           status == DownloadTaskStatus.failed ||
           status == DownloadTaskStatus.canceled) {
+        if (kDebugMode) {
+          print('updated status: $status');
+        }
         _progressController.close();
         _statusController.close();
       }
@@ -146,7 +149,9 @@ class DownloadRepo {
   }
 
   // Query a specific downloaded file by its name
-  Future<DownloadTask?> getDownloadedFileByName(String fileName) async {
+  Future<DownloadTask?> getDownloadedFileByName(
+    String fileName,
+  ) async {
     final tasks = await getCompletedDownloads();
     if (tasks == null) return null;
 
