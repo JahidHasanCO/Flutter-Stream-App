@@ -31,7 +31,10 @@ Future<void> bootstrap(FutureOr<Widget> Function() builder) async {
   // Add cross-flavor configuration here
 
   WidgetsFlutterBinding.ensureInitialized();
-  await FlutterDownloader.initialize(debug: true, ignoreSsl: true);
+  await FlutterDownloader.initialize(ignoreSsl: true);
+
+  await Future<void>.delayed(const Duration(seconds: 1));
+
 
   runApp(await builder());
 }

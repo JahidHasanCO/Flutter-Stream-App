@@ -38,6 +38,13 @@ class MediaPlayerCubit extends Cubit<MediaPlayerState> {
           ),
         );
       } else if (status == DownloadTaskStatus.complete) {
+        emit(
+          state.copyWith(
+            statusMsg: 'Download Completed!',
+            downloadProgress: 0,
+            downloadTaskStatus: DownloadTaskStatus.complete,
+          ),
+        );
         _loadDownloadedFile();
       } else if (status == DownloadTaskStatus.canceled) {
         emit(
@@ -47,8 +54,9 @@ class MediaPlayerCubit extends Cubit<MediaPlayerState> {
             downloadTaskStatus: DownloadTaskStatus.canceled,
           ),
         );
+      } else {
+        emit(state.copyWith(downloadTaskStatus: status));
       }
-      emit(state.copyWith(downloadTaskStatus: status));
     });
   }
 
@@ -84,31 +92,18 @@ class MediaPlayerCubit extends Cubit<MediaPlayerState> {
 
   Future<void> removePressed() async {
     final success = _downloadRepo.removeFileByPath(state.videoUrl);
-    if (success) {
-      // Emit a success state if the file was removed successfully
-      emit(
-        state.copyWith(
-          status: MediaPlayerStatus.success,
-          statusMsg: 'Video removed successfully',
-          videoUrl: _videoId.streamUrl,
-          downloadProgress: 0,
-          downloadTaskStatus: DownloadTaskStatus.undefined,
-          local: false, // Update local status accordingly
-        ),
-      );
-    } else {
-      // Emit a failure state if the file was not found
-      emit(
-        state.copyWith(
-          status: MediaPlayerStatus.failure,
-          local: false,
-          downloadProgress: 0,
-          downloadTaskStatus: DownloadTaskStatus.undefined,
-          videoUrl: _videoId.streamUrl,
-          statusMsg: 'Video not found or could not be removed',
-        ),
-      );
-    }
+    emit(
+      state.copyWith(
+        status: success ? MediaPlayerStatus.success : MediaPlayerStatus.failure,
+        statusMsg: success
+            ? 'Video removed successfully'
+            : 'Video not found or could not be removed',
+        videoUrl: _videoId.streamUrl,
+        downloadProgress: 0,
+        downloadTaskStatus: DownloadTaskStatus.undefined,
+        local: false, // Update local status accordingly
+      ),
+    );
   }
 
   Future<void> _loadDownloadedFile() async {

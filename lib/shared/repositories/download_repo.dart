@@ -54,9 +54,9 @@ class DownloadRepo {
         print('Data received in port: $data');
       } // Debug print
       // final id = data[0] as String;
-      final mapData = data as Map<String, dynamic>;
-      final status = DownloadTaskStatus.values[mapData['status'] as int];
-      final progress = mapData['progress'] as int;
+    
+      final status = DownloadTaskStatus.values[data[1] as int];
+      final progress = data[2] as int;
 
       // Update the progress and status streams only if they're still open
       if (_progressController.isClosed) {
@@ -90,11 +90,7 @@ class DownloadRepo {
   @pragma('vm:entry-point')
   static void downloadCallback(String id, int status, int progress) {
     final send = IsolateNameServer.lookupPortByName('downloader_send_port');
-    send?.send({
-      'id': id,
-      'status': status,
-      'progress': progress,
-    });
+    send?.send([id, status, progress]);
   }
 
   // Cancel a download task by taskId
@@ -171,6 +167,8 @@ class DownloadRepo {
       // Check if the file exists
       if (file.existsSync()) {
         file.deleteSync();
+        _progressController.close();
+        _statusController.close();
         return true; // Return true if the file was successfully deleted
       } else {
         return false; // Return false if the file doesn't exist

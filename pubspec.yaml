@@ -16,6 +16,7 @@ dependencies:
     sdk: flutter
   flutter_bloc: ^8.1.6
   flutter_downloader: ^1.11.8
+  flutter_launcher_icons: ^0.14.1
   flutter_localizations:
     sdk: flutter
   go_router: ^14.3.0
@@ -32,3 +33,12 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+  assets:
+    - assets/icons/
+
+flutter_launcher_icons:
+  ios: true
+  android: true # android icon already generate by android studio
+  image_path_ios: "assets/icons/play_arrow.png"
+  image_path_android: "assets/icons/play_arrow.png"
+  adaptive_icon_background: "assets/icons/background.png"
