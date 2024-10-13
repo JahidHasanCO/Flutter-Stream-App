@@ -16,6 +16,7 @@ class MediaPlayerState extends Equatable {
     this.statusMsg = '',
     this.videoUrl = '',
     this.local = false,
+    this.netConnected = true,
     this.downloadProgress = 0,
     this.downloadTaskStatus = DownloadTaskStatus.undefined,
   });
@@ -24,6 +25,7 @@ class MediaPlayerState extends Equatable {
   final String statusMsg;
   final String videoUrl;
   final bool local;
+  final bool netConnected;
   final double downloadProgress; // Download progress percentage (0.0 to 1.0)
   final DownloadTaskStatus downloadTaskStatus; // Status of the download task
 
@@ -33,6 +35,7 @@ class MediaPlayerState extends Equatable {
     String? statusMsg,
     String? videoUrl,
     bool? local,
+    bool? netConnected,
     double? downloadProgress,
     DownloadTaskStatus? downloadTaskStatus,
   }) {
@@ -41,6 +44,7 @@ class MediaPlayerState extends Equatable {
       statusMsg: statusMsg ?? this.statusMsg,
       videoUrl: videoUrl ?? this.videoUrl,
       local: local ?? this.local,
+      netConnected: netConnected ?? this.netConnected,
       downloadProgress: downloadProgress ?? this.downloadProgress,
       downloadTaskStatus: downloadTaskStatus ?? this.downloadTaskStatus,
     );
@@ -52,6 +56,7 @@ class MediaPlayerState extends Equatable {
         statusMsg,
         videoUrl,
         local,
+        netConnected,
         downloadProgress,
         downloadTaskStatus,
       ];

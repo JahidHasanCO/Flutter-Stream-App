@@ -17,6 +17,8 @@ class MediaPlayerCubit extends Cubit<MediaPlayerState> {
   })  : _videoId = videoId,
         _downloadRepo = downloadRepo,
         super(MediaPlayerState(videoUrl: videoId.streamUrl)) {
+    _netSubscription =
+        Connectivity().onConnectivityChanged.listen(internetConnected);
     _loadDownloadedFile();
 
     _initStreamSubscriptions();
@@ -25,54 +27,48 @@ class MediaPlayerCubit extends Cubit<MediaPlayerState> {
   void _initStreamSubscriptions() {
     _downloadProgressSubsctiption =
         _downloadRepo.progressStream.listen((progress) {
+      if (kDebugMode) {
+        print('progress cubit: $progress');
+      }
       emit(state.copyWith(downloadProgress: progress));
     });
 
     _downloadStatusSubsctiption = _downloadRepo.statusStream.listen((status) {
-      if (status == DownloadTaskStatus.enqueued) {
-        emit(
-          state.copyWith(
-            statusMsg: 'Download Started!',
-            downloadProgress: 0,
-            downloadTaskStatus: DownloadTaskStatus.enqueued,
-          ),
-        );
-      } else if (status == DownloadTaskStatus.complete) {
-        emit(
-          state.copyWith(
-            statusMsg: 'Download Completed!',
-            downloadProgress: 0,
-            downloadTaskStatus: DownloadTaskStatus.complete,
-          ),
-        );
-        _loadDownloadedFile();
-      } else if (status == DownloadTaskStatus.canceled) {
-        emit(
-          state.copyWith(
-            statusMsg: 'Download Cancelled!',
-            downloadProgress: 0,
-            downloadTaskStatus: DownloadTaskStatus.canceled,
-          ),
-        );
-      } else {
-        emit(state.copyWith(downloadTaskStatus: status));
+      if (kDebugMode) {
+        print('status cubit: $status');
       }
+      final statusMessage = switch (status) {
+        DownloadTaskStatus.enqueued ||
+        DownloadTaskStatus.running =>
+          'Download Started!',
+        DownloadTaskStatus.complete => 'Download Completed!',
+        DownloadTaskStatus.canceled => 'Download Cancelled!',
+        DownloadTaskStatus.failed => 'Download Failed!',
+        _ => null,
+      };
+
+      emit(
+        state.copyWith(
+          statusMsg: statusMessage,
+          downloadTaskStatus: status,
+        ),
+      );
     });
   }
 
-  Future<bool> internetConnected() async {
-    final connectivityResults = await Connectivity().checkConnectivity();
-
+  Future<void> internetConnected(
+    List<ConnectivityResult> connectivityResults,
+  ) async {
     if (connectivityResults.contains(ConnectivityResult.mobile) ||
         connectivityResults.contains(ConnectivityResult.wifi)) {
-      return true;
+      emit(state.copyWith(netConnected: true));
     } else {
-      return false;
+      emit(state.copyWith(netConnected: false));
     }
   }
 
   Future<void> downloadPressed() async {
-    if (!await internetConnected()) {
+    if (!state.netConnected) {
       emit(state.copyWith(statusMsg: 'No internet connection'));
       return;
     }
@@ -91,19 +87,34 @@ class MediaPlayerCubit extends Cubit<MediaPlayerState> {
   }
 
   Future<void> removePressed() async {
-    final success = _downloadRepo.removeFileByPath(state.videoUrl);
-    emit(
-      state.copyWith(
-        status: success ? MediaPlayerStatus.success : MediaPlayerStatus.failure,
-        statusMsg: success
-            ? 'Video removed successfully'
-            : 'Video not found or could not be removed',
-        videoUrl: _videoId.streamUrl,
-        downloadProgress: 0,
-        downloadTaskStatus: DownloadTaskStatus.undefined,
-        local: false, // Update local status accordingly
-      ),
-    );
+    if (_taskId != null && _taskId!.isNotEmpty) {
+      await _downloadRepo.removeTask(_taskId!);
+      emit(
+        state.copyWith(
+          status: MediaPlayerStatus.success,
+          statusMsg: 'Video removed successfully',
+          videoUrl: _videoId.streamUrl,
+          downloadProgress: 0,
+          downloadTaskStatus: DownloadTaskStatus.undefined,
+          local: false, // Update local status accordingly
+        ),
+      );
+    } else {
+      final success = _downloadRepo.removeFileByPath(state.videoUrl);
+      emit(
+        state.copyWith(
+          status:
+              success ? MediaPlayerStatus.success : MediaPlayerStatus.failure,
+          statusMsg: success
+              ? 'Video removed successfully'
+              : 'Video not found or could not be removed',
+          videoUrl: _videoId.streamUrl,
+          downloadProgress: 0,
+          downloadTaskStatus: DownloadTaskStatus.undefined,
+          local: false, // Update local status accordingly
+        ),
+      );
+    }
   }
 
   Future<void> _loadDownloadedFile() async {
@@ -147,9 +158,11 @@ class MediaPlayerCubit extends Cubit<MediaPlayerState> {
   final DownloadRepo _downloadRepo;
   StreamSubscription<DownloadTaskStatus>? _downloadStatusSubsctiption;
   StreamSubscription<double>? _downloadProgressSubsctiption;
+  StreamSubscription<List<ConnectivityResult>>? _netSubscription;
 
   @override
   Future<void> close() {
+    _netSubscription?.cancel();
     _downloadProgressSubsctiption?.cancel();
     _downloadStatusSubsctiption?.cancel();
     return super.close();

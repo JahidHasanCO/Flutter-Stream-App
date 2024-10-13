@@ -31,6 +31,14 @@ class DownloadRepo {
     String? fileName,
     String? savePath,
   }) async {
+    // Update the progress and status streams only if they're still open
+    if (_progressController.isClosed) {
+      _progressController = StreamController<double>.broadcast();
+    }
+    if (_statusController.isClosed) {
+      _statusController = StreamController<DownloadTaskStatus>.broadcast();
+    }
+
     final path = await _getSavePath;
     return FlutterDownloader.enqueue(
       url: url,
@@ -54,21 +62,17 @@ class DownloadRepo {
         print('Data received in port: $data');
       } // Debug print
       // final id = data[0] as String;
-    
+
       final status = DownloadTaskStatus.values[data[1] as int];
       final progress = data[2] as int;
 
       // Update the progress and status streams only if they're still open
-      if (_progressController.isClosed) {
-        _progressController = StreamController<double>.broadcast();
+      if (!_progressController.isClosed) {
+        _progressController.add(progress / 100);
       }
-      if (_statusController.isClosed) {
-        _statusController = StreamController<DownloadTaskStatus>.broadcast();
+      if (!_statusController.isClosed) {
+        _statusController.add(status);
       }
-
-      // Update the progress and status streams
-      _progressController.add(progress / 100);
-      _statusController.add(status);
 
       // Close streams if download is complete or failed
       if (status == DownloadTaskStatus.complete ||
@@ -77,8 +81,8 @@ class DownloadRepo {
         if (kDebugMode) {
           print('updated status: $status');
         }
-        _progressController.close();
-        _statusController.close();
+        _progressController.add(0);
+        _statusController.add(DownloadTaskStatus.undefined);
       }
     });
 
